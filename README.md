@@ -21,21 +21,14 @@ Follow these steps to set up a virtual environment for this project:
      source .venv/bin/activate
      ```
 
-4. **Install FastAPI**  
-   After activating the virtual environment, install FastAPI with the following command:
-
-   ```bash
-   pip install "fastapi[standard]"
-   ```
-
-5. **Install Dependencies**  
-   Once the virtual environment is activated, install the required dependencies using:
+4. **Install Dependencies**  
+   After activating the virtual environment, install all dependencies listed in the `requirements.txt` file:
 
    ```bash
    pip install -r requirements.txt
    ```
 
-6. **Deactivate the Virtual Environment**  
+5. **Deactivate the Virtual Environment**  
    When you're done working, deactivate the virtual environment by running:
    ```bash
    deactivate
@@ -49,9 +42,14 @@ After setting up the virtual environment and installing dependencies, you can ru
 fastapi dev main.py
 ```
 
-
 Once the server starts, you can access the application at:
 
 - **Base URL**: [http://127.0.0.1:8000](http://127.0.0.1:8000)
 - **OpenAPI Documentation**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 - **Redoc API Documentation**: [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
+
+## Additional Notes
+
+- **Pydantic**: Used for data validation and settings management in FastAPI.
+- **PyMongo**: Used for interacting with MongoDB.
+- **OpenAI**: Used for integrating OpenAI APIs.
