@@ -1,0 +1,8 @@
+fastapi[standard]
+pymongo
+openai
+pydantic
+pydantic-settings
+python-dotenv
+
+
