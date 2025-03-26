@@ -2,7 +2,7 @@ from pymongo import MongoClient, errors
 from app.core.config import settings
 from app.core.logger import logging
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)  # __name__ is the module name
 
 
 def get_database():

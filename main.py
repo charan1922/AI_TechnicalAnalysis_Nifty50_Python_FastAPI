@@ -4,6 +4,10 @@ from pymongo import MongoClient
 from openai import OpenAI
 from fastapi import FastAPI
 from app.routers.threads import router as threads_router
+from app.core.logger import configure_logging
+
+# Configure logging
+configure_logging()
 
 app = FastAPI()
 
