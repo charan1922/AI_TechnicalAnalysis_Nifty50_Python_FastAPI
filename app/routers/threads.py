@@ -27,9 +27,6 @@ class ThreadMessage(CamelCaseModel):
     message_text: str
 
 
-
-
-
 # Endpoint to create a new thread
 @router.get("/new", response_model=Thread)
 async def create_thread(name: str, db: Database = Depends(get_database)):
@@ -103,7 +100,7 @@ async def get_all_threads(db: Database = Depends(get_database)):
         )
 
 
-@router.get("/thread/{thread_id}/messages", response_model=List[ThreadMessage])
+@router.get("/{thread_id}/messages", response_model=List[ThreadMessage])
 async def thread_messages(thread_id: str):
     logger.info(f"Retrieving messages for thread: {thread_id}")
 
