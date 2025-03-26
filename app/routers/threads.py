@@ -19,6 +19,17 @@ class Thread(CamelCaseModel):
     created_at: datetime.datetime  # Timestamp for thread creation
 
 
+class ThreadMessage(CamelCaseModel):
+    run_id: str
+    msg_id: str
+    role: str
+    thread_id: str
+    message_text: str
+
+
+
+
+
 # Endpoint to create a new thread
 @router.get("/new", response_model=Thread)
 async def create_thread(name: str, db: Database = Depends(get_database)):
@@ -86,7 +97,33 @@ async def get_all_threads(db: Database = Depends(get_database)):
         logger.info(f"{len(threads)} threads retrieved successfully.")
         return threads
     except Exception as e:
-        logger.error(f"Failed to retrieve threads: {e}")
+        logger.error(f"Failed to retrieve threads: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=500, detail="An error occurred while retrieving threads."
+        )
+
+
+@router.get("/thread/{thread_id}/messages", response_model=List[ThreadMessage])
+async def thread_messages(thread_id: str):
+    logger.info(f"Retrieving messages for thread: {thread_id}")
+
+    try:
+        messageList = client.beta.threads.messages.list(thread_id=thread_id)
+        messages = []
+        for message in messageList:
+            message_obj = ThreadMessage(
+                run_id=message.run_id or "",
+                msg_id=message.id,
+                role=message.role,
+                thread_id=message.thread_id,
+                message_text=message.content[0].text.value if message.content else "",
+            )
+            messages.append(message_obj)
+
+        logger.info(f"{len(messages)} messages retrieved successfully.")
+        return messages
+    except Exception as e:
+        logger.error(f"Failed to retrieve messages: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500, detail="An error occurred while retrieving messages."
         )
