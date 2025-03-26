@@ -5,10 +5,11 @@ from app.core.database import get_database
 from app.core.logger import logging
 from app.core.openai import client
 from app.schemas.base import CamelCaseModel
+from typing import List
 
 # Initialize logger and router
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/threads", tags=["threads"])
+router = APIRouter(prefix="/thread", tags=["threads"])
 
 
 # Define the Thread model using Pydantic
@@ -36,6 +37,7 @@ async def create_thread(name: str, db: Database = Depends(get_database)):
     try:
         # Call OpenAI client to create a thread
         thread = client.beta.threads.create()
+        logger.info("Thread created successfully.")
     except Exception as e:
         logger.error(f"OpenAI thread creation failed: {e}")
         raise HTTPException(status_code=500, detail="OpenAI thread creation failed.")
@@ -47,15 +49,44 @@ async def create_thread(name: str, db: Database = Depends(get_database)):
         created_at=datetime.datetime.now(datetime.timezone.utc),
     )
 
-    # Save thread data in snake_case to the database
-    result = db["threads"].insert_one(thread_data.model_dump())  # Save without aliases
+    try:
+        # Save thread data in snake_case to the database
+        result = db["threads"].insert_one(
+            thread_data.model_dump()
+        )  # Save without aliases
 
-    # Check if the insertion was successful
-    if not result.inserted_id:
-        logger.error("Failed to insert thread into database.")
-        raise HTTPException(status_code=500, detail="Failed to create thread.")
+        # Check if the insertion was successful
+        if not result.inserted_id:
+            logger.error("Failed to insert thread into database.")
+            raise HTTPException(status_code=500, detail="Failed to create thread.")
 
-    logger.info("Thread created successfully.")
+        logger.info("Thread saved to database successfully.")
 
-    # Return thread data in camelCase to the client
-    return thread_data  # Automatically uses aliases (camelCase) due to Pydantic Config
+        # Return thread data in camelCase to the client
+        return thread_data
+
+    except Exception as e:
+        logger.error(f"Failed to insert thread into database: {e}")
+        raise HTTPException(status_code=500, detail="Database insertion failed.")
+
+
+@router.get("/allThreads", response_model=List[Thread])
+async def get_all_threads(db: Database = Depends(get_database)):
+    logger.info("Retrieving all threads from the database.")
+
+    try:
+        threads_cursor = db["threads"].find()
+        threads = []
+        for thread in threads_cursor:
+            thread_obj = Thread(
+                **thread
+            )  # **thread unpacks the dictionary into keyword arguments
+            threads.append(thread_obj)
+
+        logger.info(f"{len(threads)} threads retrieved successfully.")
+        return threads
+    except Exception as e:
+        logger.error(f"Failed to retrieve threads: {e}")
+        raise HTTPException(
+            status_code=500, detail="An error occurred while retrieving threads."
+        )
