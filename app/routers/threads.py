@@ -10,7 +10,11 @@ from app.schemas.base import CamelCaseModel
 
 # Initialize logger and router
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/thread", tags=["threads"])
+router = APIRouter(
+    prefix="/thread", tags=["threads"]
+)  # tags=["threads"] is optional but recommended for OpenAPI docs grouping  (Swagger UI)
+THREADS_COLLECTION = "threads"
+
 
 class Thread(CamelCaseModel):
     thread_id: str
@@ -22,6 +26,7 @@ class Thread(CamelCaseModel):
             datetime.datetime: lambda v: v.isoformat()  # Consistent datetime serialization
         }
 
+
 class ThreadMessage(CamelCaseModel):
     run_id: Optional[str] = None  # Optional run_id with default None
     msg_id: str
@@ -29,8 +34,10 @@ class ThreadMessage(CamelCaseModel):
     thread_id: str
     message_text: str
 
+
 class ThreadMessagesResponse(CamelCaseModel):
     messages: List[ThreadMessage]
+
 
 # Endpoint to create a new thread (sync)
 @router.get("/new", response_model=Thread, status_code=status.HTTP_201_CREATED)
@@ -53,7 +60,9 @@ def create_thread(name: str, db: Database = Depends(get_database)):
     # Validate name length (optional, remove if not needed)
     if not name.strip():
         logger.warning("Empty name provided for thread creation.")
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Name cannot be empty.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Name cannot be empty."
+        )
 
     try:
         # Call OpenAI client synchronously
@@ -63,7 +72,7 @@ def create_thread(name: str, db: Database = Depends(get_database)):
         logger.error(f"OpenAI thread creation failed: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Failed to create thread with OpenAI service."
+            detail="Failed to create thread with OpenAI service.",
         )
 
     # Prepare thread data
@@ -75,21 +84,24 @@ def create_thread(name: str, db: Database = Depends(get_database)):
 
     try:
         # Save thread data synchronously
-        result = db["threads"].insert_one(thread_data.model_dump())
+        result = db[THREADS_COLLECTION].insert_one(thread_data.model_dump())
         if not result.inserted_id:
             logger.error(f"Failed to insert thread {thread.id} into database.")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to save thread to database."
+                detail="Failed to save thread to database.",
             )
         logger.info(f"Thread {thread.id} saved to database successfully.")
         return thread_data
     except PyMongoError as e:
-        logger.error(f"Database insertion failed for thread {thread.id}: {str(e)}", exc_info=True)
+        logger.error(
+            f"Database insertion failed for thread {thread.id}: {str(e)}", exc_info=True
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Database operation failed."
+            detail="Database operation failed.",
         )
+
 
 # Endpoint to fetch all threads (sync)
 @router.get("/allThreads", response_model=List[Thread])
@@ -109,7 +121,9 @@ def get_all_threads(db: Database = Depends(get_database)):
     logger.info("Retrieving all threads from the database.")
 
     try:
-        threads_cursor = db["threads"].find().sort("created_at", -1)  # Sort newest first
+        threads_cursor = (
+            db[THREADS_COLLECTION].find().sort("created_at", -1)
+        )  # Sort newest first
         threads = [Thread(**thread) for thread in threads_cursor]  # Sync iteration
         logger.info(f"Retrieved {len(threads)} threads successfully.")
         return threads
@@ -117,8 +131,9 @@ def get_all_threads(db: Database = Depends(get_database)):
         logger.error(f"Failed to retrieve threads: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve threads from database."
+            detail="Failed to retrieve threads from database.",
         )
+
 
 # Endpoint to fetch thread messages (sync)
 @router.get("/{thread_id}/messages", response_model=ThreadMessagesResponse)
@@ -138,7 +153,9 @@ def thread_messages(thread_id: str):
     logger.info(f"Retrieving messages for thread: {thread_id}")
 
     try:
-        message_list = client.beta.threads.messages.list(thread_id=thread_id)  # Sync call
+        message_list = client.beta.threads.messages.list(
+            thread_id=thread_id
+        )  # Sync call
         messages = [
             ThreadMessage(
                 run_id=message.run_id or None,
@@ -152,8 +169,11 @@ def thread_messages(thread_id: str):
         logger.info(f"Retrieved {len(messages)} messages for thread {thread_id}.")
         return ThreadMessagesResponse(messages=messages)
     except Exception as e:
-        logger.error(f"Failed to retrieve messages for thread {thread_id}: {str(e)}", exc_info=True)
+        logger.error(
+            f"Failed to retrieve messages for thread {thread_id}: {str(e)}",
+            exc_info=True,
+        )
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Failed to retrieve messages from OpenAI service."
+            detail="Failed to retrieve messages from OpenAI service.",
         )

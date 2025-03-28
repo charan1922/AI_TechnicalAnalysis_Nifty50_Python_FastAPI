@@ -36,7 +36,7 @@ Follow these steps to set up a virtual environment for this project:
 
 ## Using Environment Variables
 
-To securely manage sensitive information like API keys or database credentials, create a `.env` file in the root directory. You can take reference from the `.env.test` file provided in the project.
+To securely manage sensitive information like API keys or database credentials, create a `.env` file in the root directory. You can take reference from the `.env.example` file provided in the project.
 
 Example `.env` file content:
 
