@@ -1,6 +1,7 @@
 import logging
 import sys
 
+
 def configure_logging():
     logging.basicConfig(
         level=logging.INFO,  # Set log level to INFO
@@ -11,6 +12,5 @@ def configure_logging():
         ],
     )
 
-    # Customize specific loggers
-    logging.getLogger("uvicorn").setLevel(logging.WARNING)
+    # Customize other loggers
     logging.getLogger("pymongo").setLevel(logging.WARNING)

@@ -2,6 +2,7 @@ fastapi[standard]
 pymongo
 openai
 pydantic
+# pydantic_ai
 pydantic-settings
 python-dotenv
 
