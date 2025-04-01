@@ -166,6 +166,7 @@ def thread_messages(thread_id: str):
             )
             for message in message_list
         ]
+        messages.reverse()  # Reverse the order of messages
         logger.info(f"Retrieved {len(messages)} messages for thread {thread_id}.")
         return ThreadMessagesResponse(messages=messages)
     except Exception as e:
