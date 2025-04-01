@@ -1,79 +1,81 @@
 from app.core.database import get_database
+from app.core.logger import logging
+
+logger = logging.getLogger(__name__)
 
 
 async def get_nifty_stock_symbol_info(stock_name):
+    logger.info("Fetching Nifty stock symbol info for: %s", stock_name)
     db = get_database()
     collection = db["nifty50"]
 
     # Create a case-insensitive regex pattern for partial matching
     regex = {"$regex": stock_name, "$options": "i"}
 
-    # Find the stock by partial matching Symbol or Company Name
-    stock = collection.find_one({"$or": [{"Symbol": regex}, {"Company Name": regex}]})
-
-    if stock:
-        return stock
-    else:
-        return f"Stock not found: {stock_name}. Please try again."
+    try:
+        stock = collection.find_one(
+            {"$or": [{"Symbol": regex}, {"Company Name": regex}]}
+        )
+        if stock:
+            logger.info("Stock found: %s", stock)
+            return stock
+        else:
+            logger.warning("Stock not found for: %s", stock_name)
+            return f"Stock not found: {stock_name}. Please try again."
+    except Exception as e:
+        logger.error("Error fetching stock symbol info: %s", str(e))
+        raise e
 
 
 async def get_stocks_by_industry(industry):
-    """
-    Retrieves a list of stocks in a specific industry from the Nifty50 collection.
-
-    :param industry: The industry name to search for
-    :return: A list of stocks in the specified industry, or an error message if not found
-    """
+    logger.info("Fetching stocks for industry: %s", industry)
     db = get_database()
     collection = db["nifty50"]
 
     # Create a case-insensitive regex pattern for partial matching
     regex = {"$regex": industry, "$options": "i"}
 
-    # Find the stock list by partial matching Industry
-    stock_list = collection.find({"Industry": regex}).to_list(length=None)
-
-    if stock_list:
-        return stock_list
-    else:
-        return f"Stock List not found for {industry} Industry. Please try again."
+    try:
+        stock_list = collection.find({"Industry": regex}).to_list(length=None)
+        if stock_list:
+            logger.info("Stocks found for industry %s: %d", industry, len(stock_list))
+            return stock_list
+        else:
+            logger.warning("No stocks found for industry: %s", industry)
+            return f"Stock List not found for {industry} Industry. Please try again."
+    except Exception as e:
+        logger.error("Error fetching stocks by industry: %s", str(e))
+        raise e
 
 
 async def get_stock_price(stock_symbol):
-    """
-    Retrieves the latest stock price for a given stock symbol.
-
-    :param stock_symbol: The stock symbol to search for
-    :return: A dictionary containing the stock symbol and its latest price
-    """
+    logger.info("Fetching stock price for symbol: %s", stock_symbol)
     try:
-        db = get_database()  # Ensure get_database is awaited if it is async
+        db = get_database()
         collection = db[stock_symbol]
 
-        # Fetch the latest stock price by sorting by Date in descending order
         stock_data = collection.find({}).sort("Date", -1).limit(1).to_list(length=1)
-
         latest_stock_price = None
         if stock_data:
             latest_stock_price = stock_data[0]["Close"]
+            logger.info(
+                "Latest stock price for %s: %s", stock_symbol, latest_stock_price
+            )
+        else:
+            logger.warning("No stock data found for symbol: %s", stock_symbol)
 
         return {"symbol": stock_symbol, "price": latest_stock_price}
     except Exception as error:
-        print(f"Error fetching stock price for {stock_symbol}: {error}")
+        logger.error("Error fetching stock price for %s: %s", stock_symbol, error)
         raise error
 
 
 async def stock_collection(stock_symbol):
-    """
-    Retrieves the collection for a given stock symbol.
-
-    :param stock_symbol: The stock symbol to search for
-    :return: The collection for the specified stock symbol
-    """
+    logger.info("Retrieving collection for stock symbol: %s", stock_symbol)
     db = get_database()
     collection = db[stock_symbol]
     try:
         return collection
     except Exception as e:
-        print(f"Error retrieving collection for {stock_symbol}: {e}")
+        logger.error("Error retrieving collection for %s: %s", stock_symbol, str(e))
         raise e

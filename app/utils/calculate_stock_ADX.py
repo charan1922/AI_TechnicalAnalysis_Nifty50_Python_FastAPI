@@ -15,7 +15,9 @@ def calculate_adx(data, period=14):
     """
     Calculate ADX for given stock data over specified period
     """
+    logger.info("Starting ADX calculation for period: %s", period)
     if len(data) < period + 1:
+        logger.warning("Not enough data to calculate ADX. Data length: %s", len(data))
         return "Not enough data to calculate ADX"
 
     tr = []
@@ -51,6 +53,8 @@ def calculate_adx(data, period=14):
         plus_dm.append(current_plus_dm)
         minus_dm.append(current_minus_dm)
 
+    logger.debug("TR: %s, +DM: %s, -DM: %s", tr, plus_dm, minus_dm)
+
     # Smooth the TR, +DM, and -DM (simple sum for initial period)
     smoothed_tr = sum(tr)
     smoothed_plus_dm = sum(plus_dm)
@@ -68,6 +72,7 @@ def calculate_adx(data, period=14):
     )
     adx = dx  # For this simplified version, ADX equals DX for the initial period
 
+    logger.info("ADX calculation completed. ADX: %s", adx)
     return adx
 
 
