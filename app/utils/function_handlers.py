@@ -1,4 +1,4 @@
-from .calculate_stock_MA import calculate_moving_average as calculate_stock_ma
+from .calculate_stock_MA import calculate_stock_ma
 from .calculate_stock_RSI import calculate_rsi as calculate_stock_rsi
 from .calculate_stock_MACD import calculate_macd as calculate_stock_macd
 from .calculate_stock_BollingerBands import (
@@ -31,7 +31,7 @@ async def handle_tool_outputs(func_name, function_arguments):
                 function_arguments["symbol"]
             )  # Added await
         elif func_name == "getStockMA":
-            output = calculate_stock_ma(function_arguments)  # No await needed
+            output = await calculate_stock_ma(function_arguments)  # No await needed
         elif func_name == "getStockRSI":
             output = calculate_stock_rsi(function_arguments)  # No await needed
         elif func_name == "getStockMACD":

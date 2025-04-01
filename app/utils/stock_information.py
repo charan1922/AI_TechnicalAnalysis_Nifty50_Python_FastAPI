@@ -61,3 +61,19 @@ async def get_stock_price(stock_symbol):
     except Exception as error:
         print(f"Error fetching stock price for {stock_symbol}: {error}")
         raise error
+
+
+async def stock_collection(stock_symbol):
+    """
+    Retrieves the collection for a given stock symbol.
+
+    :param stock_symbol: The stock symbol to search for
+    :return: The collection for the specified stock symbol
+    """
+    db = get_database()
+    collection = db[stock_symbol]
+    try:
+        return collection
+    except Exception as e:
+        print(f"Error retrieving collection for {stock_symbol}: {e}")
+        raise e
