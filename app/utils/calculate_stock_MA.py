@@ -1,7 +1,4 @@
-from pymongo import MongoClient
-import sys
 from app.utils.stock_information import stock_collection
-from app.core.database import get_database
 from app.core.logger import logging
 
 
