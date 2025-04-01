@@ -8,6 +8,8 @@ from .calculate_stock_obv import calculate_stock_obv
 from .calculate_stock_stochastic_oscillator import calculate_stock_stochastic_oscillator
 from .calculate_stock_ADX import calculate_stock_adx
 from .calculate_stock_VWAP import calculate_stock_vwap
+from app.core.logger import logging
+from bson import ObjectId  # Import for ObjectId handling
 
 from .stock_information import (
     get_nifty_stock_symbol_info,
@@ -15,9 +17,25 @@ from .stock_information import (
     get_stocks_by_industry,
 )
 
+logger = logging.getLogger(__name__)
+
+
+def convert_objectid_to_str(data):
+    """
+    Recursively convert ObjectId to string in a dictionary or list.
+    """
+    if isinstance(data, dict):
+        return {key: convert_objectid_to_str(value) for key, value in data.items()}
+    elif isinstance(data, list):
+        return [convert_objectid_to_str(item) for item in data]
+    elif isinstance(data, ObjectId):
+        return str(data)
+    return data
+
 
 async def handle_tool_outputs(func_name, function_arguments):
     try:
+        logger.info("Handling tool output for function: %s", func_name)
         output = None
         if func_name == "getStockSymbol":
             output = await get_nifty_stock_symbol_info(function_arguments["stockName"])
@@ -46,11 +64,13 @@ async def handle_tool_outputs(func_name, function_arguments):
         elif func_name == "getStockVWAP":
             output = await calculate_stock_vwap(function_arguments)  # No await needed
         else:
-            print("Function not found")
+            logger.error("Function not found: %s", func_name)
             output = f"Error: Function {func_name} not found"
 
-        print(output, f":Output of {func_name}")
+        # Convert ObjectId to string before logging or returning
+        output = convert_objectid_to_str(output)
+        logger.info("Output of %s: %s", func_name, output)
         return {"output": output}
     except Exception as error:
-        print(str(error), f":Error in {func_name}")
+        logger.error("Error in %s: %s", func_name, str(error))
         raise error
