@@ -195,7 +195,7 @@ async def check_status(thread_id: str, run_id: str):
 
 
 @router.post("/")
-async def create_message_with_polling(request: MessageRequest):
+async def create_message_without_polling(request: MessageRequest):
     """
     Create a user message and start polling for assistant run status.
 
