@@ -3,16 +3,11 @@ import json
 import os
 from app.tools.tools import tools
 from app.utils.function_handlers import handle_tool_outputs
-import asyncio  # Add asyncio for handling asynchronous calls
+import asyncio
+from app.core.openai import client
+from app.core.logger import logging
 
-client = OpenAI(
-    api_key=os.getenv("OPENAI_API_KEY"),
-)
-
-
-def get_stock_price(symbol):
-    return {"price": 100, "symbol": symbol}
-
+logger = logging.getLogger(__name__)
 
 input_messages = [
     {
@@ -32,51 +27,44 @@ input_messages = [
 
 
 async def main():
+    logger.info("Starting main function.")
     response = client.responses.create(
         model="gpt-4o-mini",
         input=input_messages,
         tools=tools,
-        # text={"format": {"type": "text"}},
         store=True,
     )
-
-    # print(response.output, ":-----------------response")
-
-    # tool_call = response.output[0]
-    # args = json.loads(tool_call.arguments)
-
-    # # print(args, ":-----------------args")
-    # result = get_stock_price(args["symbol"])
-
-    # # print(response.output, ":-----------------response output")
+    logger.info("Initial response received from OpenAI.")
 
     for tool_call in response.output:
         if tool_call.type != "function_call":
             continue
 
         name = tool_call.name
-        args = json.loads(tool_call.arguments)  # parse the arguments from JSON
-        # print(args, ":-----------------args")
+        args = json.loads(tool_call.arguments)
+        logger.debug(f"Processing tool call: {name} with arguments: {args}")
 
-        result = await handle_tool_outputs(name, args)  # Await the coroutine
-        input_messages.append(tool_call)  # append the tool call message
+        result = await handle_tool_outputs(name, args)
+        logger.info(f"Tool call {name} executed successfully with result: {result}")
+
+        input_messages.append(tool_call)
         input_messages.append(
-            {  # append result message
+            {
                 "type": "function_call_output",
-                "call_id": tool_call.call_id,  # ensure call_id matches the tool call
+                "call_id": tool_call.call_id,
                 "output": str(result),
             }
         )
 
-    # print(input_messages, ":-----------------input messages")
+    logger.info("Preparing second response with updated input messages.")
     response_2 = client.responses.create(
         model="gpt-4o",
         input=input_messages,
         tools=tools,
     )
-    print(response_2.output_text)  # Print the final output
+    logger.info("Final response received from OpenAI.")
+    print(response_2.output_text)
 
 
-# Run the main function
 if __name__ == "__main__":
     asyncio.run(main())
