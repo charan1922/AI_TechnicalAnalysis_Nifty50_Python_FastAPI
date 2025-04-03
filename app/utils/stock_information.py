@@ -20,11 +20,11 @@ async def get_nifty_stock_symbol_info(stock_name):
             logger.info("Stock found: %s", stock)
             return stock
         else:
-            logger.warning("Stock not found for: %s", stock_name)
-            return f"Stock not found: {stock_name}. Please try again."
+            logger.warning("No stock found for: %s", stock_name)
+            return {"error": f"Stock not found: {stock_name}. Please try again."}
     except Exception as e:
-        logger.error("Error fetching stock symbol info: %s", str(e))
-        raise e
+        logger.error("Error fetching stock symbol info for %s: %s", stock_name, str(e))
+        raise Exception(f"Error fetching stock symbol info: {str(e)}")
 
 
 async def get_stocks_by_industry(industry):

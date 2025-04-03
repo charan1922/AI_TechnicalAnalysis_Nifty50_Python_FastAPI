@@ -1,18 +1,22 @@
 from pymongo import MongoClient, errors
 from app.core.config import settings
 from app.core.logger import logging
+import time
 
-logger = logging.getLogger(__name__)  # __name__ is the module name
+logger = logging.getLogger(__name__)
 
 
-def get_database():
-    try:
-        client = MongoClient(settings.mongo_db_uri, serverSelectionTimeoutMS=5000)
-        # Explicitly check connection
-        client.admin.command("ping")
-        db = client[settings.db_name]
-        logger.info("Connected to MongoDB successfully.")
-        return db
-    except (errors.ConnectionFailure, errors.ServerSelectionTimeoutError) as e:
-        logger.error(f"Failed to connect to MongoDB: {e}")
-        return None
+def get_database(retries=3, delay=2):
+    for attempt in range(retries):
+        try:
+            client = MongoClient(settings.mongo_db_uri, serverSelectionTimeoutMS=5000)
+            client.admin.command("ping")
+            db = client[settings.db_name]
+            logger.info("Connected to MongoDB successfully.")
+            return db
+        except (errors.ConnectionFailure, errors.ServerSelectionTimeoutError) as e:
+            logger.error(f"Attempt {attempt + 1} - Failed to connect to MongoDB: {e}")
+            if attempt < retries - 1:
+                time.sleep(delay)
+            else:
+                raise Exception("Failed to connect to MongoDB after multiple attempts.")

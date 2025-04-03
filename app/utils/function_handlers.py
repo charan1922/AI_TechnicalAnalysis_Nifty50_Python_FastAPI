@@ -40,7 +40,7 @@ async def handle_tool_outputs(func_name, function_arguments):
         if func_name == "getStockSymbol":
             output = await get_nifty_stock_symbol_info(function_arguments["stockName"])
         elif func_name == "getStockPrice":
-            output = await get_stock_price(function_arguments["symbol"])  # Added await
+            output = await get_stock_price(function_arguments["symbol"])
         elif func_name == "getStocksByIndustry":
             output = await get_stocks_by_industry(function_arguments["symbol"])
         elif func_name == "getStockMA":
@@ -62,15 +62,20 @@ async def handle_tool_outputs(func_name, function_arguments):
         elif func_name == "getStockADX":
             output = await calculate_stock_adx(function_arguments)
         elif func_name == "getStockVWAP":
-            output = await calculate_stock_vwap(function_arguments)  # No await needed
+            output = await calculate_stock_vwap(function_arguments)
         else:
-            logger.error("Function not found: %s", func_name)
-            output = f"Error: Function {func_name} not found"
+            logger.error("Unsupported function: %s", func_name)
+            return {"error": f"Unsupported function: {func_name}"}
 
         # Convert ObjectId to string before logging or returning
         output = convert_objectid_to_str(output)
         logger.info("Output of %s: %s", func_name, output)
         return {"output": output}
+    except KeyError as error:
+        logger.error(
+            "Missing key in function_arguments for %s: %s", func_name, str(error)
+        )
+        raise Exception(f"Missing key in function_arguments: {str(error)}")
     except Exception as error:
         logger.error("Error in %s: %s", func_name, str(error))
         raise error
