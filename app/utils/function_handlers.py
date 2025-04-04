@@ -17,7 +17,7 @@ from .stock_information import (
     get_stocks_by_industry,
 )
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)  # This will inherit the global configuration
 
 
 def convert_objectid_to_str(data):

@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers.threads import router as threads_router
 from app.routers.message import router as messages_router
-# from app.routers.response import router as response_router
+from app.routers.response_api import router as response_api_router
 from app.core.logger import configure_logging
 
 # Configure logging
@@ -24,5 +24,4 @@ app.add_middleware(
 # Include the threads router
 app.include_router(threads_router)
 app.include_router(messages_router)
-# app.include_router(response_router)
-
+app.include_router(response_api_router)
