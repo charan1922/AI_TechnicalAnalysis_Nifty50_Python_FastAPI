@@ -6,7 +6,15 @@ import time
 logger = logging.getLogger(__name__)
 
 
-def get_database(retries=3, delay=2):
+def get_database():
+    """
+    Connect to the MongoDB database.
+
+    Returns:
+        Database: The connected MongoDB database instance.
+    """
+    retries = 3
+    delay = 2
     for attempt in range(retries):
         try:
             client = MongoClient(settings.mongo_db_uri, serverSelectionTimeoutMS=5000)
