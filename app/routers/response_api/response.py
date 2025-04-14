@@ -13,13 +13,18 @@ from app.core.database import get_database
 from bson import ObjectId
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/response_api", tags=["response"])
+router = APIRouter(prefix="/response", tags=["response"])
 
 instructions = "You are designed to provide comprehensive technical analysis for the top 50 stocks in the Nifty index. You offer insights on various technical indicators to aid in making informed buying and selling decisions. \n \nYou are tailored for investors and traders looking to leverage technical analysis to enhance their trading strategies. By integrating these indicators, users can gain a comprehensive understanding of stock performance and market trends, enabling more informed decision-making."
 
 
+class UserMessageRequest(BaseModel):
+    session_id: str
+    message: str
+
+
 @router.post("/")
-async def main(msg: str):
+async def main(request: UserMessageRequest):
     """
     Handles user messages, interacts with OpenAI, and manages session data.
 
@@ -37,18 +42,40 @@ async def main(msg: str):
     5. Handles errors and logs them appropriately.
     """
     db = get_database()
-    session_id = str(ObjectId())
+    session_id = request.session_id
+    if not session_id:
+        session_id = str(ObjectId())
+        logger.info(f"Generated new session ID: {session_id}")
+    else:
+        logger.info(f"Using existing session ID: {session_id}")
+    # Check if session ID already exists in the database
+    existing_session = db.sessions.find_one({"session_id": session_id})
+    if existing_session:
+        logger.info(f"Session ID {session_id} already exists in the database.")
+        # Update the session with the new message
+        db.sessions.update_one(
+            {"session_id": session_id},
+            {"$push": {"messages": {"role": "user", "content": request.message}}},
+        )
+    else:
+        logger.info(f"Session ID {session_id} does not exist. Creating a new session.")
+        # Create a new session in the database
+        db.sessions.insert_one({"session_id": session_id, "messages": []})
+        # Add the initial message to the new session
+        db.sessions.update_one(
+            {"session_id": session_id},
+            {"$push": {"messages": {"role": "user", "content": request.message}}},
+        )
+    # Create a new session ID if not provided
+
     input_messages = [
         {
             "role": "user",
-            "content": [{"type": "input_text", "text": msg}],
+            "content": [{"type": "input_text", "text": request.message}],
         },
     ]
     logger.info("Starting main function.")
     messages = input_messages.copy()
-
-    # Save initial session and messages to the database
-    db.sessions.insert_one({"session_id": session_id, "messages": messages})
 
     try:
         while True:
@@ -63,16 +90,16 @@ async def main(msg: str):
             logger.info("Response received from OpenAI.")
 
             # If final answer is returned as plain text
-            if isinstance(response.output, str):
-                logger.info("Final response received.")
+            # if isinstance(response.output, str):
+            #     logger.info("Final response received.")
 
-                # Update the database with the final response
-                db.sessions.update_one(
-                    {"session_id": session_id},
-                    {"$set": {"final_response": response.output}},
-                )
+            #     # Update the database with the final response
+            #     db.sessions.update_one(
+            #         {"session_id": session_id},
+            #         {"$set": {"final_response": response.output}},
+            #     )
 
-                return {"response": response.output}
+            #     return {"response": response.output}
 
             # Handle all tool calls in the output
             tool_calls = [
@@ -81,7 +108,14 @@ async def main(msg: str):
 
             if not tool_calls:
                 logger.warning("No function calls in response.")
-                return {"result": response.output}
+                return {
+                    "messages": [
+                        {
+                            "role": response.output[0].role,
+                            "messageText": response.output[0].content[0].text,
+                        }
+                    ]
+                }
 
             for tool_call in tool_calls:
                 name = tool_call.name
