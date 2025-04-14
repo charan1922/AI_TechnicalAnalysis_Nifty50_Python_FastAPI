@@ -43,30 +43,6 @@ async def main(request: UserMessageRequest):
     """
     db = get_database()
     session_id = request.session_id
-    if not session_id:
-        session_id = str(ObjectId())
-        logger.info(f"Generated new session ID: {session_id}")
-    else:
-        logger.info(f"Using existing session ID: {session_id}")
-    # Check if session ID already exists in the database
-    existing_session = db.sessions.find_one({"session_id": session_id})
-    if existing_session:
-        logger.info(f"Session ID {session_id} already exists in the database.")
-        # Update the session with the new message
-        db.sessions.update_one(
-            {"session_id": session_id},
-            {"$push": {"messages": {"role": "user", "content": request.message}}},
-        )
-    else:
-        logger.info(f"Session ID {session_id} does not exist. Creating a new session.")
-        # Create a new session in the database
-        db.sessions.insert_one({"session_id": session_id, "messages": []})
-        # Add the initial message to the new session
-        db.sessions.update_one(
-            {"session_id": session_id},
-            {"$push": {"messages": {"role": "user", "content": request.message}}},
-        )
-    # Create a new session ID if not provided
 
     input_messages = [
         {
