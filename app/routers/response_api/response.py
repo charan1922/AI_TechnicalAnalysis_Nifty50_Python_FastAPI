@@ -39,7 +39,7 @@ class UserMessageRequest(CamelCaseModel):
     message: str
 
 
-@router.post("/")
+@router.post("")
 async def main(request: UserMessageRequest):
     """
     Handles user messages, interacts with OpenAI, and manages session data.
@@ -66,6 +66,25 @@ async def main(request: UserMessageRequest):
             "content": [{"type": "input_text", "text": request.message}],
         },
     ]
+
+    db[RESPONSE_COLLECTION].update_one(
+        {"session_id": session_id, "messages": {"$exists": False}},
+        {"$set": {"messages": []}},
+    )
+
+    db[RESPONSE_COLLECTION].update_one(
+        {"session_id": session_id},
+        {
+            "$push": {
+                "messages": {
+                    "role": "user",
+                    "messageText": request.message,
+                    "created_at": datetime.now(timezone.utc),
+                }
+            }
+        },
+    )
+
     logger.info("Starting main function.")
     messagesCopy = input_messages.copy()
 
