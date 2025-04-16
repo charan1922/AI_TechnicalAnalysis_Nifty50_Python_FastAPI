@@ -11,6 +11,7 @@ from app.tools.tools import tools
 import json
 from app.core.database import get_database
 from bson import ObjectId
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/response", tags=["response"])
@@ -51,13 +52,13 @@ async def main(request: UserMessageRequest):
         },
     ]
     logger.info("Starting main function.")
-    messages = input_messages.copy()
+    messagesCopy = input_messages.copy()
 
     try:
         while True:
             response = client.responses.create(
                 model="gpt-4o-mini",
-                input=messages,
+                input=messagesCopy,
                 tools=tools,
                 store=True,
                 instructions=instructions,
@@ -84,11 +85,36 @@ async def main(request: UserMessageRequest):
 
             if not tool_calls:
                 logger.warning("No function calls in response.")
+                role = response.output[0].role
+                message_text = response.output[0].content[0].text
+                # Remove the conflicting `messages` field
+
+                # Step 1: Make sure 'messages' exists
+                db.sessions.update_one(
+                    {"session_id": session_id, "messages": {"$exists": False}},
+                    {"$set": {"messages": []}},
+                )
+
+                # Step 2: Push message
+                db.sessions.update_one(
+                    {"session_id": session_id},
+                    {
+                        "$push": {
+                            "messages": {
+                                "role": role,
+                                "message_text": message_text,
+                                "created_at": datetime.now(timezone.utc),
+                            }
+                        }
+                    },
+                )
+
                 return {
                     "messages": [
                         {
                             "role": response.output[0].role,
                             "messageText": response.output[0].content[0].text,
+                            "created_at": datetime.now(timezone.utc),
                         }
                     ]
                 }
@@ -102,27 +128,13 @@ async def main(request: UserMessageRequest):
 
                 await asyncio.sleep(1)
                 # Append tool call and its output to messages
-                messages.append(tool_call)
-                messages.append(
+                messagesCopy.append(tool_call)  # append model's function call message
+                messagesCopy.append(  # append result message
                     {
                         "type": "function_call_output",
                         "call_id": tool_call.call_id,
                         "output": str(result),
                     }
-                )
-
-                # Save only the function_call_output data to the database
-                db.sessions.update_one(
-                    {"session_id": session_id},
-                    {
-                        "$push": {
-                            "messages": {
-                                "type": "function_call_output",
-                                "call_id": tool_call.call_id,
-                                "output": str(result),
-                            }
-                        }
-                    },
                 )
 
             logger.info("Tool call(s) processed; continuing loop for next round.")
