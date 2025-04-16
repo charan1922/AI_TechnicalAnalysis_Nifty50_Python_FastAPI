@@ -79,7 +79,7 @@ def create_session(request: AnalysisRequest, db: Database = Depends(get_database
 
 
 # Endpoint to fetch all sessions
-@router.get("/", response_model=List[Session])
+@router.get("", response_model=List[Session])
 def get_all_sessions(db: Database = Depends(get_database)):
     """
     Retrieves all sessions from the database.

@@ -1,10 +1,11 @@
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, HTTPException, Request, status, Depends
 from fastapi.responses import StreamingResponse
+from app.schemas.base import CamelCaseModel
 from app.utils.function_handlers import handle_tool_outputs
 from app.core.openai import client
 from app.core.config import settings
 from app.core.logger import logging
-from typing import Dict, Any
+from typing import Dict, Any, List
 from pydantic import BaseModel
 import asyncio
 from app.tools.tools import tools
@@ -12,14 +13,28 @@ import json
 from app.core.database import get_database
 from bson import ObjectId
 from datetime import datetime, timezone
+from pymongo.database import Database
+from pymongo.errors import PyMongoError
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/response", tags=["response"])
 
 instructions = "You are designed to provide comprehensive technical analysis for the top 50 stocks in the Nifty index. You offer insights on various technical indicators to aid in making informed buying and selling decisions. \n \nYou are tailored for investors and traders looking to leverage technical analysis to enhance their trading strategies. By integrating these indicators, users can gain a comprehensive understanding of stock performance and market trends, enabling more informed decision-making."
 
+RESPONSE_COLLECTION = "sessions"
 
-class UserMessageRequest(BaseModel):
+
+class Message(CamelCaseModel):
+    role: str
+    message_text: str
+    created_at: datetime
+
+
+class ResponsesData(CamelCaseModel):
+    messages: List[Message]
+
+
+class UserMessageRequest(CamelCaseModel):
     session_id: str
     message: str
 
@@ -71,7 +86,7 @@ async def main(request: UserMessageRequest):
             #     logger.info("Final response received.")
 
             #     # Update the database with the final response
-            #     db.sessions.update_one(
+            #     db[RESPONSE_COLLECTION].update_one(
             #         {"session_id": session_id},
             #         {"$set": {"final_response": response.output}},
             #     )
@@ -90,13 +105,13 @@ async def main(request: UserMessageRequest):
                 # Remove the conflicting `messages` field
 
                 # Step 1: Make sure 'messages' exists
-                db.sessions.update_one(
+                db[RESPONSE_COLLECTION].update_one(
                     {"session_id": session_id, "messages": {"$exists": False}},
                     {"$set": {"messages": []}},
                 )
 
                 # Step 2: Push message
-                db.sessions.update_one(
+                db[RESPONSE_COLLECTION].update_one(
                     {"session_id": session_id},
                     {
                         "$push": {
@@ -142,3 +157,26 @@ async def main(request: UserMessageRequest):
     except Exception as e:
         logger.error(f"Error creating message: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+@router.get("/{session_id}", response_model=ResponsesData)
+async def get_responses(session_id: str, db: Database = Depends(get_database)):
+    """
+    Retrieves all messages for a given session ID.
+    """
+    try:
+        session = db[RESPONSE_COLLECTION].find_one({"session_id": session_id}) or {}
+
+        messages = session.get("messages", [])
+        logger.info(f"Retrieved {len(messages)} message(s) for session_id={session_id}")
+
+        return {"messages": messages}
+
+    except PyMongoError as e:
+        logger.error(
+            f"Database error while retrieving session {session_id}: {e}", exc_info=True
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve messages",
+        )

@@ -5,7 +5,7 @@ from logging.handlers import RotatingFileHandler
 
 def configure_logging():
     logging.basicConfig(
-        level=logging.DEBUG,  # Changed from INFO to DEBUG to capture all log levels
+        level=logging.INFO,  # Changed from INFO to DEBUG to capture all log levels
         format="%(asctime)s | %(name)s | %(levelname)s | %(message)s",
         handlers=[
             logging.StreamHandler(sys.stdout),
